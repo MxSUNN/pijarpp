@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="id">
 
@@ -12,6 +11,34 @@
         'resources/css/app.css',
         'resources/js/app.js'
     ])
+
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        .shell {
+            display: flex;
+            min-height: 100vh;
+            align-items: stretch;
+        }
+
+        .sidebar {
+            flex-shrink: 0;
+            align-self: stretch;
+            min-height: 100vh;
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .main {
+            flex: 1;
+            min-width: 0;
+            overflow-x: auto;
+        }
+    </style>
 </head>
 
 <body>
