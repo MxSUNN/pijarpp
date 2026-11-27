@@ -135,6 +135,33 @@
             @enderror
         </label>
 
+        {{-- GOOGLE DRIVE LINK --}}
+        <label class="wide">
+            <span>Link Google Drive</span>
+
+            <input
+                class="input"
+                type="url"
+                name="drive_link"
+                value="{{ old('drive_link') }}"
+                placeholder="https://drive.google.com/drive/folders/..."
+            >
+
+            <small>
+                Contoh link:
+                https://drive.google.com/drive/folders/1AbCdEfGhIjKlMn
+            </small>
+
+            <small>
+                Masukkan link Google Drive yang berisi dokumen RPS & SILABUS. Pastikan akses link sudah diatur agar dapat
+                dibuka oleh pihak terkait.
+            </small>
+
+            @error('drive_link')
+                <small class="error">{{ $message }}</small>
+            @enderror
+        </label>
+
         {{-- OTHER SUBMISSION DETAILS --}}
         @foreach([
             ['topic', 'Topik'],

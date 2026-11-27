@@ -102,12 +102,14 @@ public function storeSubmission(Request $r)
                 ->where('study_program', $user->study_program)
         ],
 
-        'topic' => 'required',
+                'topic' => 'required',
         'practitioner_competency' => 'required',
         'practitioner_qualification' => 'required',
         'partner_needs' => 'nullable',
         'estimated_schedule' => 'nullable|date',
-        'notes' => 'nullable'
+        'notes' => 'nullable',
+        // GDRIVE LINK
+        'drive_link' => 'nullable|url|max:2048'
     ]);
 
     // Retrieve the selected course
