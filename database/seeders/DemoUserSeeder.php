@@ -14,6 +14,7 @@ class DemoUserSeeder extends Seeder
             ['Aulia Prameswari',     'admin@pijar.demo',      'admin_pijar_suar', null],
             ['Nadia Mahendra',       'kerma@pijar.demo',      'admin_kerma',     null],
             ['Dr. Rina Kusuma',      'kaprodi@pijar.demo',    'kaprodi',         'Business Information System'],
+            ['Dr. ladesh kotno',      'kaprodi1@pijar.demo',    'kaprodi',         'informatic'],
             ['Dimas Wiratama, M.T.', 'dosen@pijar.demo',      'dosen',           'Manajemen'],
         ];
 

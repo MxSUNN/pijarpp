@@ -1,24 +1,401 @@
 <?php
-namespace App\Http\Controllers;
-use Illuminate\Http\Request; use Illuminate\Support\Facades\{DB,Hash}; use Illuminate\Validation\Rule;
-class PortalController {
- private function scoped($q,Request $r){ $u=$r->user(); if($u->role==='kaprodi') $q->where('study_program',$u->study_program); if($u->role==='dosen') $q->where('lecturer_id',$u->lecturer_id); return $q; }
- public function dashboard(Request $r){ $q=$this->scoped(DB::table('submissions'),$r); $subs=(clone $q)->latest()->limit(5)->get(); return view('portal.dashboard',['submissions'=>$subs,'stats'=>['Pengajuan'=>(clone $q)->count(),'Disetujui'=>(clone $q)->where('approval_status','approved')->count(),'Perlu revisi'=>(clone $q)->where('approval_status','revision_required')->count(),'Jadwal'=>DB::table('schedules')->count()]]); }
- public function submissions(Request $r){ $q=$this->scoped(DB::table('submissions'),$r); if($r->user()->role==='admin_kerma')$q->where('approval_status','approved'); if($r->filled('status'))$q->where('approval_status',$r->status); if($r->filled('q'))$q->where(fn($x)=>$x->where('course_name','like','%'.$r->q.'%')->orWhere('code','like','%'.$r->q.'%')); return view('portal.submissions',['items'=>$q->latest()->paginate(15)->withQueryString()]); }
- public function createSubmission(){ return view('portal.submission-form',['lecturers'=>DB::table('lecturers')->where('is_active',true)->get()]); }
- public function storeSubmission(Request $r){ $d=$r->validate(['program_type'=>['required',Rule::in(['PIJAR','SUAR'])],'course_name'=>'required|max:150','course_code'=>'required|max:30','study_program'=>'required|max:100','lecturer_id'=>'required|integer','credits'=>'required|integer|min:1|max:8','topic'=>'required','practitioner_competency'=>'required','practitioner_qualification'=>'required','partner_needs'=>'nullable','estimated_schedule'=>'nullable|date','notes'=>'nullable']); $d+=['code'=>'SUB-'.now()->format('YmdHis'),'approval_status'=>'submitted','practitioner_status'=>'not_assigned','partner_status'=>'not_assigned','submitted_by'=>$r->user()->id,'created_at'=>now(),'updated_at'=>now()]; DB::table('submissions')->insert($d); return redirect()->route('portal.submissions')->with('success','Pengajuan berhasil dikirim.'); }
- public function showSubmission(Request $r,int $id){ $q=$this->scoped(DB::table('submissions'),$r); $item=$q->where('id',$id)->first(); abort_unless($item,404); return view('portal.submission-detail',['item'=>$item,'practitioners'=>DB::table('practitioners')->where('is_active',true)->get(),'partners'=>DB::table('partners')->where('is_active',true)->get()]); }
- public function decide(Request $r,int $id){ $d=$r->validate(['approval_status'=>['required',Rule::in(['approved','rejected','revision_required'])],'decision_note'=>'required|min:5']); DB::table('submissions')->where('id',$id)->update($d+['decided_by'=>$r->user()->id,'decided_at'=>now(),'updated_at'=>now()]); return back()->with('success','Keputusan tersimpan.'); }
- public function assign(Request $r,int $id){ $d=$r->validate(['kind'=>['required',Rule::in(['practitioner','partner'])],'assignee_id'=>'required|integer']); $s=DB::table('submissions')->find($id); abort_unless($s&&$s->approval_status==='approved',422); if($d['kind']==='practitioner') abort_unless($s->program_type==='SUAR',422); $field=$d['kind'].'_id'; DB::table('submissions')->where('id',$id)->update([$field=>$d['assignee_id'],$d['kind'].'_status'=>'assigned','updated_at'=>now()]); return back()->with('success','Penugasan tersimpan.'); }
- public function directory(Request $r,string $type){ abort_unless(in_array($type,['lecturers','practitioners','partners']),404); return view('portal.directory',['type'=>$type,'items'=>DB::table($type)->orderBy('name')->get()]); }
- public function saveDirectory(Request $r,string $type,?int $id=null){ abort_unless(in_array($type,['lecturers','practitioners','partners']),404); $rules=['name'=>'required|max:150','institution'=>'nullable|max:150','study_program'=>'nullable|max:100','position'=>'nullable|max:100','competencies'=>'nullable','qualification'=>'nullable','expertise'=>'nullable','contact'=>'nullable|max:150','industry'=>'nullable|max:150','contact_name'=>'nullable|max:150']; $allowed=['lecturers'=>['name','institution','study_program','contact'],'practitioners'=>['name','institution','position','competencies','qualification','expertise','contact'],'partners'=>['name','institution','industry','contact_name','contact']][$type]; $d=collect($r->validate($rules))->only($allowed)->filter(fn($v)=>$v!==null&&$v!=='')->all(); $d['is_active']=$r->boolean('is_active',true); $d['updated_at']=now(); $id?DB::table($type)->where('id',$id)->update($d):DB::table($type)->insert($d+['created_at'=>now()]); return back()->with('success','Data berhasil disimpan.'); }
- public function schedules(Request $r){ return view('portal.schedules',['items'=>DB::table('schedules')->orderBy('date')->get()]); }
- public function materials(Request $r){ $q=DB::table('submissions')->where('approval_status','approved'); $this->scoped($q,$r); return view('portal.materials',['items'=>$q->leftJoin('teaching_materials','submissions.id','=','teaching_materials.submission_id')->select('submissions.*','teaching_materials.status as material_status','teaching_materials.id as material_id')->get()]); }
- public function editMaterial(Request $r,int $submission){ $q=$this->scoped(DB::table('submissions'),$r); $item=$q->where('id',$submission)->where('approval_status','approved')->first(); abort_unless($item,404); return view('portal.material-form',['submission'=>$item,'material'=>DB::table('teaching_materials')->where('submission_id',$submission)->first()]); }
- public function saveMaterial(Request $r,int $submission){ $q=$this->scoped(DB::table('submissions'),$r); abort_unless($q->where('id',$submission)->where('approval_status','approved')->exists(),404); $d=$r->validate(['lesson_plan_url'=>'required|url','presentation_url'=>'required|url','assignment_url'=>'required|url','reference_url'=>'required|url','notes'=>'nullable']); $d+=['submission_id'=>$submission,'status'=>$r->has('submit')?'submitted':'draft','updated_by'=>$r->user()->name,'updated_at'=>now()]; DB::table('teaching_materials')->updateOrInsert(['submission_id'=>$submission],$d+['created_at'=>now()]); return redirect()->route('portal.materials')->with('success','Bahan mengajar tersimpan.'); }
- public function documents(){ return view('portal.documents',['items'=>DB::table('documents')->latest()->get()]); }
- public function storeDocument(Request $r){ $d=$r->validate(['title'=>'required|max:150','category'=>'required|max:80','drive_url'=>'required|url','description'=>'nullable']); DB::table('documents')->insert($d+['created_at'=>now(),'updated_at'=>now()]); return back()->with('success','Dokumen ditambahkan.'); }
- public function administration(string $type){ abort_unless(in_array($type,['users','master','audit','recap']),404); $items=match($type){'users'=>DB::table('users')->orderBy('name')->get(),'master'=>DB::table('master_data')->orderBy('category')->get(),'audit'=>DB::table('audit_logs')->latest()->limit(100)->get(),default=>DB::table('submissions')->selectRaw("study_program, count(*) total, sum(approval_status = 'approved') approved")->groupBy('study_program')->get()}; return view('portal.administration',compact('type','items')); }
- public function saveAdministration(Request $r,string $type){ if($type==='users'){ $d=$r->validate(['name'=>'required|max:150','email'=>'required|email|unique:users,email','password'=>'required|min:8','role'=>['required',Rule::in(['super_admin','admin_pijar_suar','admin_kerma','kaprodi','dosen'])],'study_program'=>'nullable','lecturer_id'=>'nullable|integer']); $d['password']=Hash::make($d['password']); $d['is_active']=true; DB::table('users')->insert($d+['created_at'=>now(),'updated_at'=>now()]); } elseif($type==='master'){ $d=$r->validate(['category'=>'required','name'=>'required','description'=>'nullable']); DB::table('master_data')->insert($d+['is_active'=>true,'created_at'=>now(),'updated_at'=>now()]); } else abort(404); DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'create','subject'=>$type,'details'=>'Data ditambahkan','created_at'=>now(),'updated_at'=>now()]); return back()->with('success','Data administrasi disimpan.'); }
 
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\{DB, Hash};
+use Illuminate\Validation\Rule;
+
+class PortalController
+{
+    private function scoped($q, Request $r)
+    {
+        $u = $r->user();
+
+        if ($u->role === 'kaprodi')
+            $q->where('study_program', $u->study_program);
+
+        if ($u->role === 'dosen')
+            $q->where('lecturer_id', $u->lecturer_id);
+
+        return $q;
+    }
+
+    public function dashboard(Request $r)
+    {
+        $q = $this->scoped(DB::table('submissions'), $r);
+        $subs = (clone $q)->latest()->limit(5)->get();
+
+        return view('portal.dashboard', [
+            'submissions' => $subs,
+            'stats' => [
+                'Pengajuan' => (clone $q)->count(),
+                'Disetujui' => (clone $q)->where('approval_status', 'approved')->count(),
+                'Perlu revisi' => (clone $q)->where('approval_status', 'revision_required')->count(),
+                'Jadwal' => DB::table('schedules')->count()
+            ]
+        ]);
+    }
+
+    public function submissions(Request $r)
+    {
+        $q = $this->scoped(DB::table('submissions'), $r);
+
+        if ($r->user()->role === 'admin_kerma')
+            $q->where('approval_status', 'approved');
+
+        if ($r->filled('status'))
+            $q->where('approval_status', $r->status);
+
+        if ($r->filled('q'))
+            $q->where(fn($x) => $x->where('course_name', 'like', '%' . $r->q . '%')
+                ->orWhere('code', 'like', '%' . $r->q . '%'));
+
+        return view('portal.submissions', [
+            'items' => $q->latest()->paginate(15)->withQueryString()
+        ]);
+    }
+
+    
+public function createSubmission(Request $r)
+{
+    $user = $r->user();
+
+    return view('portal.submission-form', [
+        'lecturers' => DB::table('lecturers')
+            ->where('is_active', true)
+            ->where('study_program', $user->study_program)
+            ->orderBy('name')
+            ->get(),
+
+        'courses' => DB::table('courses')
+            ->where('study_program', $user->study_program)
+            ->orderBy('course_name')
+            ->get(),
+    ]);
+}
+
+
+    
+public function storeSubmission(Request $r)
+{
+    $user = $r->user();
+
+    $d = $r->validate([
+        'program_type' => [
+            'required',
+            Rule::in(['PIJAR', 'SUAR'])
+        ],
+
+        'course_id' => [
+            'required',
+            'integer',
+            Rule::exists('courses', 'id')
+                ->where('study_program', $user->study_program)
+        ],
+
+        'lecturer_id' => [
+            'required',
+            'integer',
+            Rule::exists('lecturers', 'id')
+                ->where('is_active', 1)
+                ->where('study_program', $user->study_program)
+        ],
+
+        'topic' => 'required',
+        'practitioner_competency' => 'required',
+        'practitioner_qualification' => 'required',
+        'partner_needs' => 'nullable',
+        'estimated_schedule' => 'nullable|date',
+        'notes' => 'nullable'
+    ]);
+
+    // Retrieve the selected course
+    $course = DB::table('courses')
+        ->where('id', $d['course_id'])
+        ->where('study_program', $user->study_program)
+        ->first();
+
+    abort_unless($course, 403);
+
+    unset($d['course_id']);
+
+    // Automatically get course information
+    $d['course_name'] = $course->course_name;
+    $d['course_code'] = $course->course_code;
+    $d['credits'] = $course->credits;
+    $d['study_program'] = $user->study_program;
+
+    $d += [
+        'code' => 'SUB-' . now()->format('YmdHis'),
+        'approval_status' => 'submitted',
+        'practitioner_status' => 'not_assigned',
+        'partner_status' => 'not_assigned',
+        'submitted_by' => $user->id,
+        'created_at' => now(),
+        'updated_at' => now()
+    ];
+
+    DB::table('submissions')->insert($d);
+
+    return redirect()->route('portal.submissions')
+        ->with('success', 'Pengajuan berhasil dikirim.');
+}
+
+    public function showSubmission(Request $r, int $id)
+    {
+        $q = $this->scoped(DB::table('submissions'), $r);
+        $item = $q->where('id', $id)->first();
+
+        abort_unless($item, 404);
+
+        return view('portal.submission-detail', [
+            'item' => $item,
+            'practitioners' => DB::table('practitioners')->where('is_active', true)->get(),
+            'partners' => DB::table('partners')->where('is_active', true)->get()
+        ]);
+    }
+
+    public function decide(Request $r, int $id)
+    {
+        $d = $r->validate([
+            'approval_status' => ['required', Rule::in(['approved', 'rejected', 'revision_required'])],
+            'decision_note' => 'required|min:5'
+        ]);
+
+        DB::table('submissions')->where('id', $id)->update($d + [
+            'decided_by' => $r->user()->id,
+            'decided_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        return back()->with('success', 'Keputusan tersimpan.');
+    }
+
+    public function assign(Request $r, int $id)
+    {
+        $d = $r->validate([
+            'kind' => ['required', Rule::in(['practitioner', 'partner'])],
+            'assignee_id' => 'required|integer'
+        ]);
+
+        $s = DB::table('submissions')->find($id);
+
+        abort_unless($s && $s->approval_status === 'approved', 422);
+
+        if ($d['kind'] === 'practitioner')
+            abort_unless($s->program_type === 'SUAR', 422);
+
+        $field = $d['kind'] . '_id';
+
+        DB::table('submissions')->where('id', $id)->update([
+            $field => $d['assignee_id'],
+            $d['kind'] . '_status' => 'assigned',
+            'updated_at' => now()
+        ]);
+
+        return back()->with('success', 'Penugasan tersimpan.');
+    }
+
+    public function directory(Request $r, string $type)
+    {
+        abort_unless(in_array($type, ['lecturers', 'practitioners', 'partners']), 404);
+
+        return view('portal.directory', [
+            'type' => $type,
+            'items' => DB::table($type)->orderBy('name')->get()
+        ]);
+    }
+
+    public function saveDirectory(Request $r, string $type, ?int $id = null)
+    {
+        abort_unless(in_array($type, ['lecturers', 'practitioners', 'partners']), 404);
+
+        $rules = [
+            'name' => 'required|max:150',
+            'institution' => 'nullable|max:150',
+            'study_program' => 'nullable|max:100',
+            'position' => 'nullable|max:100',
+            'competencies' => 'nullable',
+            'qualification' => 'nullable',
+            'expertise' => 'nullable',
+            'contact' => 'nullable|max:150',
+            'industry' => 'nullable|max:150',
+            'contact_name' => 'nullable|max:150'
+        ];
+
+        $allowed = [
+            'lecturers' => ['name', 'institution', 'study_program', 'contact'],
+            'practitioners' => ['name', 'institution', 'position', 'competencies', 'qualification', 'expertise', 'contact'],
+            'partners' => ['name', 'institution', 'industry', 'contact_name', 'contact']
+        ][$type];
+
+        $d = collect($r->validate($rules))
+            ->only($allowed)
+            ->filter(fn($v) => $v !== null && $v !== '')
+            ->all();
+
+        $d['is_active'] = $r->boolean('is_active', true);
+        $d['updated_at'] = now();
+
+        $id
+            ? DB::table($type)->where('id', $id)->update($d)
+            : DB::table($type)->insert($d + ['created_at' => now()]);
+
+        return back()->with('success', 'Data berhasil disimpan.');
+    }
+
+    public function schedules(Request $r)
+    {
+        return view('portal.schedules', [
+            'items' => DB::table('schedules')->orderBy('date')->get()
+        ]);
+    }
+
+    public function materials(Request $r)
+    {
+        $q = DB::table('submissions')->where('approval_status', 'approved');
+        $this->scoped($q, $r);
+
+        return view('portal.materials', [
+            'items' => $q->leftJoin('teaching_materials', 'submissions.id', '=', 'teaching_materials.submission_id')
+                ->select(
+                    'submissions.*',
+                    'teaching_materials.status as material_status',
+                    'teaching_materials.id as material_id'
+                )->get()
+        ]);
+    }
+
+    public function editMaterial(Request $r, int $submission)
+    {
+        $q = $this->scoped(DB::table('submissions'), $r);
+        $item = $q->where('id', $submission)->where('approval_status', 'approved')->first();
+
+        abort_unless($item, 404);
+
+        return view('portal.material-form', [
+            'submission' => $item,
+            'material' => DB::table('teaching_materials')->where('submission_id', $submission)->first()
+        ]);
+    }
+
+    public function saveMaterial(Request $r, int $submission)
+    {
+        $q = $this->scoped(DB::table('submissions'), $r);
+
+        abort_unless(
+            $q->where('id', $submission)->where('approval_status', 'approved')->exists(),
+            404
+        );
+
+        $d = $r->validate([
+            'lesson_plan_url' => 'required|url',
+            'presentation_url' => 'required|url',
+            'assignment_url' => 'required|url',
+            'reference_url' => 'required|url',
+            'notes' => 'nullable'
+        ]);
+
+        $d += [
+            'submission_id' => $submission,
+            'status' => $r->has('submit') ? 'submitted' : 'draft',
+            'updated_by' => $r->user()->name,
+            'updated_at' => now()
+        ];
+
+        DB::table('teaching_materials')->updateOrInsert(
+            ['submission_id' => $submission],
+            $d + ['created_at' => now()]
+        );
+
+        return redirect()->route('portal.materials')->with('success', 'Bahan mengajar tersimpan.');
+    }
+
+    public function documents()
+    {
+        return view('portal.documents', [
+            'items' => DB::table('documents')->latest()->get()
+        ]);
+    }
+
+    public function storeDocument(Request $r)
+    {
+        $d = $r->validate([
+            'title' => 'required|max:150',
+            'category' => 'required|max:80',
+            'drive_url' => 'required|url',
+            'description' => 'nullable'
+        ]);
+
+        DB::table('documents')->insert($d + [
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        return back()->with('success', 'Dokumen ditambahkan.');
+    }
+
+    public function administration(string $type)
+    {
+        abort_unless(in_array($type, ['users', 'master', 'audit', 'recap']), 404);
+
+        $items = match ($type) {
+            'users' => DB::table('users')->orderBy('name')->get(),
+            'master' => DB::table('master_data')->orderBy('category')->get(),
+            'audit' => DB::table('audit_logs')->latest()->limit(100)->get(),
+            default => DB::table('submissions')
+                ->selectRaw("study_program, count(*) total, sum(approval_status = 'approved') approved")
+                ->groupBy('study_program')->get()
+        };
+
+        return view('portal.administration', compact('type', 'items'));
+    }
+
+    public function saveAdministration(Request $r, string $type)
+    {
+        if ($type === 'users') {
+            $d = $r->validate([
+                'name' => 'required|max:150',
+                'email' => 'required|email|unique:users,email',
+                'password' => 'required|min:8',
+                'role' => ['required', Rule::in(['super_admin', 'admin_pijar_suar', 'admin_kerma', 'kaprodi', 'dosen'])],
+                'study_program' => 'nullable',
+                'lecturer_id' => 'nullable|integer'
+            ]);
+
+            $d['password'] = Hash::make($d['password']);
+            $d['is_active'] = true;
+
+            DB::table('users')->insert($d + [
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        } elseif ($type === 'master') {
+            $d = $r->validate([
+                'category' => 'required',
+                'name' => 'required',
+                'description' => 'nullable'
+            ]);
+
+            DB::table('master_data')->insert($d + [
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        } else {
+            abort(404);
+        }
+
+        DB::table('audit_logs')->insert([
+            'user_id' => $r->user()->id,
+            'action' => 'create',
+            'subject' => $type,
+            'details' => 'Data ditambahkan',
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        return back()->with('success', 'Data administrasi disimpan.');
+    }
 }
