@@ -1,1 +1,79 @@
-@extends('layouts.portal') @section('title','Data '.ucfirst($type)) @section('content')<p class="eyebrow">DATA REFERENSI</p><h1 class="title">Data {{ucfirst($type)}}</h1><section class="panel"><div style="overflow:auto"><table><thead><tr><th>Nama</th><th>Institusi / Prodi</th><th>Kompetensi / Industri</th><th>Status</th></tr></thead><tbody>@foreach($items as $x)<tr><td><strong>{{$x->name}}</strong><br><small>{{$x->contact ?? '—'}}</small></td><td>{{$x->institution ?? $x->study_program ?? '—'}}</td><td>{{$x->competencies ?? $x->industry ?? '—'}}</td><td><span class="badge">{{$x->is_active?'Aktif':'Nonaktif'}}</span></td></tr>@endforeach</tbody></table></div></section><form class="panel form-grid" method="post" action="{{route('portal.directory.save',$type)}}">@csrf<h2 class="wide">Tambah data</h2>@foreach(['name'=>'Nama','institution'=>'Institusi','study_program'=>'Program studi','position'=>'Jabatan','competencies'=>'Kompetensi','qualification'=>'Kualifikasi','expertise'=>'Keahlian','industry'=>'Industri','contact_name'=>'Kontak person','contact'=>'Kontak'] as $k=>$l)<label><span>{{$l}}</span><input class="input" name="{{$k}}" @if($k==='name') required @endif></label>@endforeach<label><span><input type="checkbox" name="is_active" value="1" checked style="width:auto"> Aktif</span></label><div class="wide"><button class="btn primary">Simpan</button></div></form>@endsection
+@extends('layouts.portal')
+
+@section('title', 'Data ' . ucfirst($type))
+
+@section('content')
+    <p class="eyebrow">DATA REFERENSI</p>
+
+    <h1 class="title">Data {{ ucfirst($type) }}</h1>
+
+    <section class="panel">
+        <div style="overflow:auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nama</th>
+                        <th>Institusi / Prodi</th>
+                        <th>Kompetensi / Industri</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($items as $x)
+                        <tr>
+                            <td>
+                                <strong>{{ $x->name }}</strong>
+                                <br>
+                                <small>{{ $x->contact ?? '—' }}</small>
+                            </td>
+                            <td>{{ $x->institution ?? $x->study_program ?? '—' }}</td>
+                            <td>{{ $x->competencies ?? $x->industry ?? '—' }}</td>
+                            <td>
+                                <span class="badge">{{ $x->is_active ? 'Aktif' : 'Nonaktif' }}</span>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <form class="panel form-grid" method="post" action="{{ route('portal.directory.save', $type) }}">
+        @csrf
+
+        <h2 class="wide">Tambah data</h2>
+
+        @foreach([
+            'name' => 'Nama',
+            'institution' => 'Institusi',
+            'study_program' => 'Program studi',
+            'position' => 'Jabatan',
+            'competencies' => 'Kompetensi',
+            'qualification' => 'Kualifikasi',
+            'expertise' => 'Keahlian',
+            'industry' => 'Industri',
+            'contact_name' => 'Kontak person',
+            'contact' => 'Kontak',
+        ] as $k => $l)
+            <label>
+                <span>{{ $l }}</span>
+                <input
+                    class="input"
+                    name="{{ $k }}"
+                    @if($k === 'name') required @endif
+                >
+            </label>
+        @endforeach
+
+        <label>
+            <span>
+                <input type="checkbox" name="is_active" value="1" checked style="width:auto">
+                Aktif
+            </span>
+        </label>
+
+        <div class="wide">
+            <button class="btn primary">Simpan</button>
+        </div>
+    </form>
+@endsection

@@ -1,1 +1,42 @@
-@extends('layouts.portal') @section('title','Bahan Mengajar') @section('content')<p class="eyebrow">PELAPORAN</p><h1 class="title">Kelengkapan Bahan Mengajar</h1><section class="panel"><table><thead><tr><th>Mata kuliah</th><th>Program studi</th><th>Status</th><th></th></tr></thead><tbody>@foreach($items as $x)<tr><td><strong>{{$x->course_name}}</strong><br><small>{{$x->code}}</small></td><td>{{$x->study_program}}</td><td><span class="badge">{{$x->material_status ?? 'belum diisi'}}</span></td><td>@if(in_array(auth()->user()->role,['dosen','kaprodi']))<a class="btn secondary" href="{{route('portal.materials.edit',$x->id)}}">Buka</a>@endif</td></tr>@endforeach</tbody></table></section>@endsection
+@extends('layouts.portal')
+
+@section('title', 'Bahan Mengajar')
+
+@section('content')
+    <p class="eyebrow">PELAPORAN</p>
+
+    <h1 class="title">Kelengkapan Bahan Mengajar</h1>
+
+    <section class="panel">
+        <table>
+            <thead>
+                <tr>
+                    <th>Mata kuliah</th>
+                    <th>Program studi</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($items as $x)
+                    <tr>
+                        <td>
+                            <strong>{{ $x->course_name }}</strong>
+                            <br>
+                            <small>{{ $x->code }}</small>
+                        </td>
+                        <td>{{ $x->study_program }}</td>
+                        <td>
+                            <span class="badge">{{ $x->material_status ?? 'belum diisi' }}</span>
+                        </td>
+                        <td>
+                            @if(in_array(auth()->user()->role, ['dosen', 'kaprodi']))
+                                <a class="btn secondary" href="{{ route('portal.materials.edit', $x->id) }}">Buka</a>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </section>
+@endsection

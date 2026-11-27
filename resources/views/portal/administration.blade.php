@@ -1,1 +1,91 @@
-@extends('layouts.portal') @section('title','Administrasi Sistem') @section('content')<p class="eyebrow">ADMINISTRASI SISTEM</p><h1 class="title">{{ucfirst($type)}}</h1><section class="panel"><table><thead><tr><th>Data</th><th>Informasi</th><th>Status / Nilai</th></tr></thead><tbody>@foreach($items as $x)<tr><td><strong>{{$x->name ?? $x->study_program ?? $x->action}}</strong></td><td>{{$x->email ?? $x->category ?? $x->subject ?? ('Total pengajuan: '.$x->total)}}</td><td>{{$x->role ?? $x->details ?? $x->approved ?? ($x->is_active?'Aktif':'Nonaktif')}}</td></tr>@endforeach</tbody></table></section>@if(in_array($type,['users','master']))<form class="panel form-grid" method="post" action="{{route('portal.administration.save',$type)}}">@csrf<h2 class="wide">Tambah {{$type}}</h2>@if($type==='users')@foreach(['name'=>'Nama','email'=>'Email','password'=>'Password awal','study_program'=>'Program studi','lecturer_id'=>'ID dosen'] as $k=>$l)<label><span>{{$l}}</span><input class="input" name="{{$k}}" @if(in_array($k,['name','email','password'])) required @endif></label>@endforeach<label><span>Role</span><select name="role">@foreach(['super_admin','admin_pijar_suar','admin_kerma','kaprodi','dosen'] as $r)<option>{{$r}}</option>@endforeach</select></label>@else<label><span>Kategori</span><input class="input" name="category" required></label><label><span>Nama</span><input class="input" name="name" required></label><label class="wide"><span>Deskripsi</span><textarea name="description"></textarea></label>@endif<div class="wide"><button class="btn primary">Simpan</button></div></form>@endif @endsection
+@extends('layouts.portal')
+
+@section('title', 'Administrasi Sistem')
+
+@section('content')
+    <p class="eyebrow">ADMINISTRASI SISTEM</p>
+
+    <h1 class="title">{{ ucfirst($type) }}</h1>
+
+    <section class="panel">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Informasi</th>
+                    <th>Status / Nilai</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($items as $x)
+                    <tr>
+                        <td>
+                            <strong>{{ $x->name ?? $x->study_program ?? $x->action }}</strong>
+                        </td>
+                        <td>
+                            {{ $x->email ?? $x->category ?? $x->subject ?? ('Total pengajuan: ' . $x->total) }}
+                        </td>
+                        <td>
+                            {{ $x->role ?? $x->details ?? $x->approved ?? ($x->is_active ? 'Aktif' : 'Nonaktif') }}
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </section>
+
+    @if(in_array($type, ['users', 'master']))
+        <form class="panel form-grid" method="post" action="{{ route('portal.administration.save', $type) }}">
+            @csrf
+
+            <h2 class="wide">Tambah {{ $type }}</h2>
+
+            @if($type === 'users')
+                @foreach([
+                    'name' => 'Nama',
+                    'email' => 'Email',
+                    'password' => 'Password awal',
+                    'study_program' => 'Program studi',
+                    'lecturer_id' => 'ID dosen',
+                ] as $k => $l)
+                    <label>
+                        <span>{{ $l }}</span>
+                        <input
+                            class="input"
+                            name="{{ $k }}"
+                            @if(in_array($k, ['name', 'email', 'password'])) required @endif
+                        >
+                    </label>
+                @endforeach
+
+                <label>
+                    <span>Role</span>
+                    <select name="role">
+                        @foreach(['super_admin', 'admin_pijar_suar', 'admin_kerma', 'kaprodi', 'dosen'] as $r)
+                            <option>{{ $r }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            @else
+                <label>
+                    <span>Kategori</span>
+                    <input class="input" name="category" required>
+                </label>
+
+                <label>
+                    <span>Nama</span>
+                    <input class="input" name="name" required>
+                </label>
+
+                <label class="wide">
+                    <span>Deskripsi</span>
+                    <textarea name="description"></textarea>
+                </label>
+            @endif
+
+            <div class="wide">
+                <button class="btn primary">Simpan</button>
+            </div>
+        </form>
+    @endif
+@endsection

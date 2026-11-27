@@ -1,1 +1,50 @@
-@extends('layouts.portal') @section('title','Dokumen') @section('content')<p class="eyebrow">PUSAT DOKUMEN</p><h1 class="title">Dokumen Akademik dan Praktisi</h1><div class="grid">@foreach($items as $x)<article class="panel"><span class="badge">{{$x->category}}</span><h3>{{$x->title}}</h3><p class="muted">{{$x->description}}</p><a class="btn secondary" href="{{$x->drive_url}}" target="_blank" rel="noreferrer">Buka di Google Drive</a></article>@endforeach</div>@if(in_array(auth()->user()->role,['super_admin','admin_pijar_suar']))<form class="panel form-grid" method="post" action="{{route('portal.documents.store')}}">@csrf<h2 class="wide">Tambah dokumen</h2><label><span>Judul</span><input class="input" name="title" required></label><label><span>Kategori</span><input class="input" name="category" required></label><label class="wide"><span>URL Google Drive</span><input class="input" type="url" name="drive_url" required></label><label class="wide"><span>Deskripsi</span><textarea name="description"></textarea></label><button class="btn primary">Simpan</button></form>@endif @endsection
+@extends('layouts.portal')
+
+@section('title', 'Dokumen')
+
+@section('content')
+    <p class="eyebrow">PUSAT DOKUMEN</p>
+
+    <h1 class="title">Dokumen Akademik dan Praktisi</h1>
+
+    <div class="grid">
+        @foreach($items as $x)
+            <article class="panel">
+                <span class="badge">{{ $x->category }}</span>
+                <h3>{{ $x->title }}</h3>
+                <p class="muted">{{ $x->description }}</p>
+                <a class="btn secondary" href="{{ $x->drive_url }}" target="_blank" rel="noreferrer">Buka di Google Drive</a>
+            </article>
+        @endforeach
+    </div>
+
+    @if(in_array(auth()->user()->role, ['super_admin', 'admin_pijar_suar']))
+        <form class="panel form-grid" method="post" action="{{ route('portal.documents.store') }}">
+            @csrf
+
+            <h2 class="wide">Tambah dokumen</h2>
+
+            <label>
+                <span>Judul</span>
+                <input class="input" name="title" required>
+            </label>
+
+            <label>
+                <span>Kategori</span>
+                <input class="input" name="category" required>
+            </label>
+
+            <label class="wide">
+                <span>URL Google Drive</span>
+                <input class="input" type="url" name="drive_url" required>
+            </label>
+
+            <label class="wide">
+                <span>Deskripsi</span>
+                <textarea name="description"></textarea>
+            </label>
+
+            <button class="btn primary">Simpan</button>
+        </form>
+    @endif
+@endsection
