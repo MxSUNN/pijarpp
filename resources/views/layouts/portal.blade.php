@@ -31,80 +31,94 @@
 
             <nav class="nav">
 
-                {{-- Dashboard --}}
-                <a
-                    class="{{request()->routeIs('portal.dashboard')?'active':''}}"
-                    href="{{route('portal.dashboard')}}"
-                >
-                    Dashboard
-                </a>
+    {{-- Dashboard --}}
+    <a
+        class="{{ request()->routeIs('portal.dashboard*') ? 'active' : '' }}"
+        href="{{ route('portal.dashboard') }}"
+    >
+        Dashboard
+    </a>
 
-                {{-- Monitoring Pengajuan --}}
-                <a
-                    class="{{request()->routeIs('portal.submissions*')?'active':''}}"
-                    href="{{route('portal.submissions')}}"
-                >
-                    Monitoring Pengajuan
-                </a>
+    {{-- Jadwal Perkuliahan --}}
+    <a
+        class="{{ request()->routeIs('portal.schedules') ? 'active' : '' }}"
+        href="{{ route('portal.schedules') }}"
+    >
+        Jadwal Perkuliahan
+    </a>
 
-                {{-- Menu Kaprodi --}}
-                @if(auth()->user()->role==='kaprodi')
-                    <a href="{{route('portal.submissions.create')}}">
-                        Buat Pengajuan
-                    </a>
-                @endif
+    {{-- Buat Pengajuan (khusus Kaprodi) --}}
+    @if(auth()->user()->role === 'kaprodi')
+        <a
+            class="{{ request()->routeIs('portal.submissions.create') ? 'active' : '' }}"
+            href="{{ route('portal.submissions.create') }}"
+        >
+            Buat Pengajuan
+        </a>
+    @endif
 
-                {{-- Menu Akademik --}}
-                <a href="{{route('portal.schedules')}}">
-                    Jadwal Perkuliahan
-                </a>
+    {{-- Pelaporan Bahan Mengajar --}}
+    <a
+        class="{{ request()->routeIs('portal.materials*') ? 'active' : '' }}"
+        href="{{ route('portal.materials') }}"
+    >
+        Pelaporan Bahan Mengajar
+    </a>
 
-                <a href="{{route('portal.materials')}}">
-                    Pelaporan Bahan Mengajar
-                </a>
+    {{-- Monitoring Pengajuan --}}
+    <a
+        class="{{ request()->routeIs('portal.submissions') || request()->routeIs('portal.submissions.show') ? 'active' : '' }}"
+        href="{{ route('portal.submissions') }}"
+    >
+        Monitoring Pengajuan
+    </a>
 
-                <a href="{{route('portal.documents')}}">
-                    Dokumen
-                </a>
+    {{-- Dokumen --}}
+    <a
+        class="{{ request()->routeIs('portal.documents*') ? 'active' : '' }}"
+        href="{{ route('portal.documents') }}"
+    >
+        Dokumen
+    </a>
 
-                {{-- Super Admin dan Admin PIJAR-SUAR --}}
-                @if(in_array(auth()->user()->role,['super_admin','admin_pijar_suar']))
-                    <a href="{{route('portal.directory','lecturers')}}">
-                        Data Dosen
-                    </a>
+    {{-- Super Admin dan Admin PIJAR-SUAR --}}
+    @if(in_array(auth()->user()->role, ['super_admin', 'admin_pijar_suar']))
+        <a href="{{ route('portal.directory', 'lecturers') }}">
+            Data Dosen
+        </a>
 
-                    <a href="{{route('portal.directory','practitioners')}}">
-                        Data Praktisi
-                    </a>
-                @endif
+        <a href="{{ route('portal.directory', 'practitioners') }}">
+            Data Praktisi
+        </a>
+    @endif
 
-                {{-- Super Admin dan Admin KERMA --}}
-                @if(in_array(auth()->user()->role,['super_admin','admin_kerma']))
-                    <a href="{{route('portal.directory','partners')}}">
-                        Data Mitra
-                    </a>
-                @endif
+    {{-- Super Admin dan Admin KERMA --}}
+    @if(in_array(auth()->user()->role, ['super_admin', 'admin_kerma']))
+        <a href="{{ route('portal.directory', 'partners') }}">
+            Data Mitra
+        </a>
+    @endif
 
-                {{-- Khusus Super Admin --}}
-                @if(auth()->user()->role==='super_admin')
-                    <a href="{{route('portal.administration','users')}}">
-                        Pengguna & Role
-                    </a>
+    {{-- Khusus Super Admin --}}
+    @if(auth()->user()->role === 'super_admin')
+        <a href="{{ route('portal.administration', 'users') }}">
+            Pengguna & Role
+        </a>
 
-                    <a href="{{route('portal.administration','master')}}">
-                        Data Master
-                    </a>
+        <a href="{{ route('portal.administration', 'master') }}">
+            Data Master
+        </a>
 
-                    <a href="{{route('portal.administration','recap')}}">
-                        Rekapitulasi
-                    </a>
+        <a href="{{ route('portal.administration', 'recap') }}">
+            Rekapitulasi
+        </a>
 
-                    <a href="{{route('portal.administration','audit')}}">
-                        Audit Log
-                    </a>
-                @endif
+        <a href="{{ route('portal.administration', 'audit') }}">
+            Audit Log
+        </a>
+    @endif
 
-            </nav>
+</nav>
 
         </aside>
 
