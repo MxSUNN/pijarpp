@@ -20,5 +20,24 @@ class PortalController {
  public function storeDocument(Request $r){ $d=$r->validate(['title'=>'required|max:150','category'=>'required|max:80','drive_url'=>'required|url','description'=>'nullable']); DB::table('documents')->insert($d+['created_at'=>now(),'updated_at'=>now()]); return back()->with('success','Dokumen ditambahkan.'); }
  public function administration(string $type){ abort_unless(in_array($type,['users','master','audit','recap']),404); $items=match($type){'users'=>DB::table('users')->orderBy('name')->get(),'master'=>DB::table('master_data')->orderBy('category')->get(),'audit'=>DB::table('audit_logs')->latest()->limit(100)->get(),default=>DB::table('submissions')->selectRaw("study_program, count(*) total, sum(approval_status = 'approved') approved")->groupBy('study_program')->get()}; return view('portal.administration',compact('type','items')); }
  public function saveAdministration(Request $r,string $type){ if($type==='users'){ $d=$r->validate(['name'=>'required|max:150','email'=>'required|email|unique:users,email','password'=>'required|min:8','role'=>['required',Rule::in(['super_admin','admin_pijar_suar','admin_kerma','kaprodi','dosen'])],'study_program'=>'nullable','lecturer_id'=>'nullable|integer']); $d['password']=Hash::make($d['password']); $d['is_active']=true; DB::table('users')->insert($d+['created_at'=>now(),'updated_at'=>now()]); } elseif($type==='master'){ $d=$r->validate(['category'=>'required','name'=>'required','description'=>'nullable']); DB::table('master_data')->insert($d+['is_active'=>true,'created_at'=>now(),'updated_at'=>now()]); } else abort(404); DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'create','subject'=>$type,'details'=>'Data ditambahkan','created_at'=>now(),'updated_at'=>now()]); return back()->with('success','Data administrasi disimpan.'); }
+ public function reviewMaterial(Request $r, int $submission)
+ {
+     $item = DB::table('submissions')->where('id', $submission)->first();
+     $material = DB::table('teaching_materials')->where('submission_id', $submission)->first();
+     abort_unless($item && $material, 404);
+     return view('portal.material-review', ['submission' => $item, 'material' => $material]);
+ }
 
+ public function saveReview(Request $r, int $submission)
+ {
+     $d = $r->validate([
+         'status' => ['required', Rule::in(['complete', 'revision_required'])],
+         'review_note' => 'required_if:status,revision_required|nullable|min:5',
+     ]);
+     $material = DB::table('teaching_materials')->where('submission_id', $submission)->first();
+     abort_unless($material && $material->status === 'submitted', 422);
+     DB::table('teaching_materials')->where('submission_id', $submission)->update($d + ['updated_at' => now()]);
+     DB::table('audit_logs')->insert(['user_id' => $r->user()->id, 'action' => 'review', 'subject' => 'teaching_materials', 'details' => 'Laporan pengajuan #'.$submission.' → '.$d['status'], 'created_at' => now(), 'updated_at' => now()]);
+     return redirect()->route('portal.materials')->with('success', 'Hasil peninjauan tersimpan.');
+ }
 }
